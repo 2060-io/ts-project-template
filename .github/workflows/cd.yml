@@ -1,0 +1,166 @@
+name: Continuous Deployment
+
+on:
+  push:
+    branches: [main, 'release/**']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  IMAGE_NAME: ${{ github.event.repository.name }}
+
+jobs:
+  resolve-version:
+    uses: 2060-io/organization/.github/workflows/resolve-version-call.yml@41008f619521ec154b02a7065ad332fad445a2fd # v0.5.1
+    with:
+      # Maintenance branches anchor their dev prereleases to the branch itself.
+      prerelease-branch: ${{ github.ref_name }}
+
+  detect-artifacts:
+    runs-on: ubuntu-latest
+    outputs:
+      dockerfile: ${{ steps.detect.outputs.dockerfile }}
+      charts: ${{ steps.detect.outputs.charts }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      # hashFiles() is empty in a job-level `if` because nothing is checked out yet,
+      # so publishable artifacts are detected here and consumed via needs.
+      - name: Detect publishable artifacts
+        id: detect
+        run: |
+          if [ -f Dockerfile ]; then
+            echo "dockerfile=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "dockerfile=false" >> "$GITHUB_OUTPUT"
+          fi
+          if [ -f charts/Chart.yaml ]; then
+            echo "charts=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "charts=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  docker:
+    needs: [resolve-version, detect-artifacts]
+    if: needs.resolve-version.outputs.new-release-published == 'true' && needs.detect-artifacts.outputs.dockerfile == 'true'
+    runs-on: ubuntu-latest
+
+    env:
+      RELEASE_VERSION: ${{ needs.resolve-version.outputs.release-version }}
+      RELEASE_MAJOR: ${{ needs.resolve-version.outputs.release-major }}
+      RELEASE_MINOR: ${{ needs.resolve-version.outputs.release-minor }}
+      RELEASE_PATCH: ${{ needs.resolve-version.outputs.release-patch }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      # Floating pointers (latest, dev, vN, vN.M-dev) only move from the default branch,
+      # so a maintenance branch can never drag them backwards.
+      - name: Compute image tags
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ secrets.DOCKER_HUB_LOGIN }}/${{ env.IMAGE_NAME }}
+          flavor: latest=false
+          tags: |
+            type=raw,value=${{ env.RELEASE_VERSION }}
+            type=raw,value=v${{ env.RELEASE_MAJOR }}.${{ env.RELEASE_MINOR }},enable=${{ needs.resolve-version.outputs.release-type == 'stable' }}
+            type=raw,value=v${{ env.RELEASE_MAJOR }},enable=${{ needs.resolve-version.outputs.release-type == 'stable' && github.ref_name == github.event.repository.default_branch }}
+            type=raw,value=latest,enable=${{ needs.resolve-version.outputs.release-type == 'stable' && github.ref_name == github.event.repository.default_branch }}
+            type=raw,value=v${{ env.RELEASE_MAJOR }}.${{ env.RELEASE_MINOR }}.${{ env.RELEASE_PATCH }}-dev,enable=${{ needs.resolve-version.outputs.release-type == 'dev' }}
+            type=raw,value=v${{ env.RELEASE_MAJOR }}.${{ env.RELEASE_MINOR }}-dev,enable=${{ needs.resolve-version.outputs.release-type == 'dev' && github.ref_name == github.event.repository.default_branch }}
+            type=raw,value=v${{ env.RELEASE_MAJOR }}-dev,enable=${{ needs.resolve-version.outputs.release-type == 'dev' && github.ref_name == github.event.repository.default_branch }}
+            type=raw,value=dev,enable=${{ needs.resolve-version.outputs.release-type == 'dev' && github.ref_name == github.event.repository.default_branch }}
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+      - name: Docker login
+        uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
+        with:
+          username: ${{ secrets.DOCKER_HUB_LOGIN }}
+          password: ${{ secrets.DOCKER_HUB_PWD }}
+
+      - name: Build & push ${{ env.IMAGE_NAME }}
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  helm:
+    needs: [resolve-version, detect-artifacts, docker]
+    # Without the status functions a skipped `docker` (no Dockerfile) would skip the chart publish too.
+    if: >-
+      !cancelled() &&
+      needs.resolve-version.outputs.new-release-published == 'true' &&
+      needs.detect-artifacts.outputs.charts == 'true' &&
+      needs.docker.result != 'failure'
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TYPE: ${{ needs.resolve-version.outputs.release-type }}
+      RELEASE_VERSION: ${{ needs.resolve-version.outputs.release-version }}
+      RELEASE_MAJOR: ${{ needs.resolve-version.outputs.release-major }}
+      RELEASE_MINOR: ${{ needs.resolve-version.outputs.release-minor }}
+      RELEASE_PATCH: ${{ needs.resolve-version.outputs.release-patch }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Setup Helm
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+
+      - name: Docker login
+        uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
+        with:
+          username: ${{ secrets.DOCKER_HUB_LOGIN }}
+          password: ${{ secrets.DOCKER_HUB_PWD }}
+
+      - name: Push Helm chart to Docker Hub OCI repo
+        run: |
+          if [ "$RELEASE_TYPE" = "stable" ]; then
+            TAGS=("${RELEASE_VERSION}")
+          else
+            TAGS=(
+              "v${RELEASE_MAJOR}.${RELEASE_MINOR}.${RELEASE_PATCH}-dev"
+              "${RELEASE_VERSION}"
+            )
+          fi
+          CHART_NAME=$(grep '^name:' ./charts/Chart.yaml | awk '{print $2}')
+          helm dependency update ./charts
+          for tag in "${TAGS[@]}"; do
+            helm package ./charts --version "$tag" -d ./charts
+            helm push "./charts/${CHART_NAME}-${tag}.tgz" oci://docker.io/${{ secrets.DOCKER_HUB_LOGIN }}
+          done
+
+  discord-notify:
+    needs: [resolve-version, docker, helm]
+    # Runs even when docker/helm are skipped, which is the case until a consumer adds them.
+    if: >-
+      !cancelled() &&
+      needs.resolve-version.outputs.new-release-published == 'true' &&
+      needs.resolve-version.outputs.release-type == 'stable' &&
+      needs.docker.result != 'failure' &&
+      needs.helm.result != 'failure'
+    permissions:
+      contents: read
+    uses: 2060-io/organization/.github/workflows/discord-release-notify-call.yml@41008f619521ec154b02a7065ad332fad445a2fd # v0.5.1
+    with:
+      tag_name: ${{ needs.resolve-version.outputs.release-version }}
+    # Explicit pass, not `secrets: inherit`, so the call also works cross-org.
+    secrets:
+      DISCORD_UPDATES_WEBHOOK_URL: ${{ secrets.DISCORD_UPDATES_WEBHOOK_URL }}

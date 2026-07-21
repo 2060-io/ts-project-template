@@ -2,14 +2,14 @@ name: Continuous Integration
 
 on:
   pull_request:
-    branches: [main]
-    types: [opened, synchronize, reopened, labeled]
+    branches: [main, 'release/**']
+    types: [opened, synchronize, reopened, labeled, edited]
   push:
-    branches: [main]
+    branches: [main, 'release/**']
   workflow_dispatch:
 
 jobs:
   ci:
-    uses: 2060-io/organization/.github/workflows/2060-linter-call.yml@main
+    uses: 2060-io/organization/.github/workflows/2060-linter-call.yml@41008f619521ec154b02a7065ad332fad445a2fd # v0.5.1
     with:
       enable-charts-lint: false

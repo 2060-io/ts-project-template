@@ -6,11 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "maxSize": 10000000
-  },
-  "formatter": {
-    "indentStyle": "space",
-    "lineWidth": 120,
+    "maxSize": 10000000,
     "includes": [
       "**",
       "!**/node_modules",
@@ -20,6 +16,11 @@
       "!**/pnpm-lock.yaml",
       "!**/.changeset"
     ]
+  },
+  "formatter": {
+    "useEditorconfig": true,
+    "indentStyle": "space",
+    "lineWidth": 120
   },
   "javascript": {
     "parser": {
@@ -45,18 +46,15 @@
         "useImportType": "off",
         "useNodejsImportProtocol": "off",
         "noNonNullAssertion": "error",
-        "noRestrictedGlobals": {
-          "level": "error",
-          "options": {
-            "deniedGlobals": { "Buffer": "TODO: Add a custom message here." }
-          }
-        },
         "noRestrictedImports": {
           "level": "error",
           "options": {
-            "paths": {
-              "packages/*": "using imports from packages/* is not allowed"
-            }
+            "patterns": [
+              {
+                "group": ["**/packages/**"],
+                "message": "using imports from packages/* is not allowed"
+              }
+            ]
           }
         }
       },
@@ -76,7 +74,6 @@
       "complexity": {
         "noBannedTypes": "error"
       },
-      "nursery": {},
       "performance": {
         "noDelete": {
           "fix": "none",
@@ -87,27 +84,15 @@
   },
   "overrides": [
     {
-      "includes": ["scripts/**"],
-      "linter": {
-        "rules": {
-          "correctness": {
-            "noUndeclaredVariables": "off"
-          }
-        }
-      }
-    },
-    {
-      "includes": ["**/*.test.ts", "**/__tests__/**", "**/vitest.*.ts", "**/scripts/**", "**/tests/**", "**/tests/**"],
+      "includes": ["**/*.test.ts", "**/*.spec.ts", "**/__tests__/**", "**/vitest.*.ts", "**/scripts/**", "**/tests/**"],
       "linter": {
         "rules": {
           "suspicious": {
+            "noConsole": "off",
             "noNonNullAssertedOptionalChain": "off"
           },
           "complexity": {
             "useArrowFunction": "off"
-          },
-          "correctness": {
-            "noUndeclaredDependencies": "off"
           }
         }
       }
