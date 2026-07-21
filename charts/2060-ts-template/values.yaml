@@ -1,0 +1,36 @@
+replicaCount: 1
+
+image:
+  # Set to "<dockerhub-user>/2060-ts-template" to match the CD-published image.
+  repository: 2060io/2060-ts-template
+  pullPolicy: IfNotPresent
+  # Overrides the image tag (defaults to the chart appVersion when empty).
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+podAnnotations: {}
+
+resources: {}
+  # limits:
+  #   cpu: 500m
+  #   memory: 256Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+# Extra environment variables injected into the container.
+env: []
+  # - name: LOG_LEVEL
+  #   value: info
+
+service:
+  enabled: false
+  type: ClusterIP
+  port: 3000
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
