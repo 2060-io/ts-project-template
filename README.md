@@ -41,11 +41,6 @@ To ensure code quality and correctness, run the following commands:
   pnpm test:watch
   ```
 
-- **Run Tests with Coverage**:
-  ```bash
-  pnpm test:cov
-  ```
-
 ### Build
 To build the project for production, run:
 
@@ -59,3 +54,61 @@ To run all checks in one command:
 ```bash
 pnpm validate
 ```
+
+## CI/CD
+
+This template ships the standard 2060-io GitHub Actions pipeline, built on the
+shared reusable workflows (`2060-linter-call`, `resolve-version-call`,
+`discord-release-notify-call`). Use it as a reference for new projects and as the
+baseline when upgrading existing ones.
+
+### Continuous Integration — [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
+
+Runs on every pull request and on pushes to `main` / `v*` branches:
+
+- **`ci`** — reusable `2060-linter-call` job: build, format check, type check,
+  unit/integration/e2e tests and conventional-commit PR-title validation.
+  Helm chart linting is available via `enable-charts-lint: true` (off by default).
+- **`docker-build`** — builds the Docker image (without pushing) so image
+  breakage is caught in PRs.
+
+### Continuous Deployment — [`.github/workflows/cd.yml`](.github/workflows/cd.yml)
+
+Runs on pushes to `main`, `release/**` and `v*` branches:
+
+1. **`resolve-version`** — reusable `resolve-version-call` decides the next
+   version: **stable** releases via [release-please](https://github.com/googleapis/release-please)
+   (a merged Release PR) or **dev** prereleases via semantic-release (any push
+   with releasable commits).
+2. **`docker`** — builds and pushes the image to Docker Hub with the resolved
+   version plus the floating tags (`latest`, `dev`, `v<major>`, `v<major>.<minor>`, …).
+3. **`helm`** — packages and pushes the Helm chart under [`charts/`](charts/) to
+   the Docker Hub OCI registry with matching tags.
+4. **`discord-notify`** — announces stable releases on Discord. A manual
+   `workflow_dispatch` (input `notify_tag`) can re-announce any tag.
+
+Versioning is driven by [`release-please-config.json`](release-please-config.json)
+and [`.release-please-manifest.json`](.release-please-manifest.json).
+
+### Required repository secrets
+
+| Secret | Used by | Purpose |
+| --- | --- | --- |
+| `DOCKER_HUB_LOGIN` | `cd.yml` | Docker Hub username / org (also the image & chart namespace) |
+| `DOCKER_HUB_PWD` | `cd.yml` | Docker Hub access token |
+| `DISCORD_UPDATES_WEBHOOK_URL` | `cd.yml` | Discord webhook for release announcements |
+
+`GITHUB_TOKEN` is provided automatically by GitHub Actions.
+
+### Adapting this template to a new project
+
+- Rename the image everywhere it is referenced: `IMAGE_NAME` in
+  [`cd.yml`](.github/workflows/cd.yml), the chart directory
+  `charts/2060-ts-template/` and `charts/*/Chart.yaml`, and `image.repository`
+  in [`charts/2060-ts-template/values.yaml`](charts/2060-ts-template/values.yaml).
+- Update the `.name` / `.fullname` / `.labels` helpers in
+  `charts/<name>/templates/_helpers.tpl` to match the new chart name.
+- Adjust the [`Dockerfile`](Dockerfile) if the app needs a runtime port, extra
+  build artifacts or system packages. `service.enabled` in `values.yaml` exposes
+  a Kubernetes Service when the app listens on a port.
+- Set the starting version in `.release-please-manifest.json`.

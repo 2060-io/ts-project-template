@@ -12,16 +12,14 @@
     "fix-format": "biome check --write --unsafe",
     "check-types": "tsc -p tsconfig.json --noEmit",
     "test": "vitest",
-    "validate": "pnpm types:check && pnpm style:check"
+    "validate": "pnpm check-types && pnpm check-format"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.3.14",
-    "@types/node": "^25.2.3",
-    "@typescript-eslint/eslint-plugin": "^6.6.0",
-    "@typescript-eslint/parser": "^6.6.0",
+    "@biomejs/biome": "^2.5.5",
+    "@types/node": "^26.1.1",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.3.0",
-    "vitest": "^1.4.0"
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.10"
   },
-  "packageManager": "pnpm@8.6.0"
+  "packageManager": "pnpm@10.34.5"
 }
