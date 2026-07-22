@@ -17,9 +17,9 @@ jobs:
   # Reusable 2060 pipeline: build + format + types + unit/integration/e2e tests,
   # PR-title (conventional commits) validation and Helm chart linting.
   ci:
-    uses: 2060-io/organization/.github/workflows/2060-linter-call.yml@251db2251120e805474da6528dfafd9693379b6e # main
+    uses: 2060-io/organization/.github/workflows/2060-linter-call.yml@41008f619521ec154b02a7065ad332fad445a2fd # v0.5.1
     with:
-      enable-charts-lint: false
+      enable-charts-lint: true
 
   # Validate the Docker image builds on every PR/push (without pushing it).
   docker-build:
