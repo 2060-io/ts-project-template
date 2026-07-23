@@ -2,7 +2,7 @@ replicaCount: 1
 
 image:
   # Set to "<dockerhub-user>/2060-ts-template" to match the CD-published image.
-  repository: 2060io/2060-ts-template
+  repository: io2060/2060-ts-template
   pullPolicy: IfNotPresent
   # Overrides the image tag (defaults to the chart appVersion when empty).
   tag: ""
