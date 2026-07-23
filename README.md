@@ -74,7 +74,16 @@ Runs on every pull request and on pushes to `main` / `v*` branches:
 
 ### Continuous Deployment — [`.github/workflows/cd.yml`](.github/workflows/cd.yml)
 
-Runs on pushes to `main`, `release/**` and `v*` branches:
+> **Dormant by default.** So a repo created from this template never publishes a
+> throwaway image/chart to Docker Hub before it is configured, the whole CD
+> pipeline is skipped unless the repository variable **`CD_ENABLED`** is set to
+> `true`. To activate it:
+> 1. **Settings → Secrets and variables → Actions → Variables** → add
+>    `CD_ENABLED = true`.
+> 2. Add the required secrets (see below).
+> 3. Rename `IMAGE_NAME` and the chart to match the project (see *Adapting…*).
+
+Once enabled, it runs on pushes to `main`, `release/**` and `v*` branches:
 
 1. **`resolve-version`** — reusable `resolve-version-call` decides the next
    version: **stable** releases via [release-please](https://github.com/googleapis/release-please)

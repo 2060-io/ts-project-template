@@ -1,3 +1,14 @@
+# Continuous Deployment.
+#
+# This pipeline is DORMANT by default so a freshly-created repo (or a fork of the
+# template) never tries to publish a throwaway image/chart to Docker Hub before it
+# is configured. To activate it, the maintainer must OPT IN explicitly:
+#   1. Create a repository variable  CD_ENABLED = true
+#      (Settings → Secrets and variables → Actions → Variables)
+#   2. Add the required secrets: DOCKER_HUB_LOGIN, DOCKER_HUB_PWD,
+#      DISCORD_UPDATES_WEBHOOK_URL
+#   3. Rename IMAGE_NAME / the chart to match the new project.
+# Until CD_ENABLED is 'true', every job below is skipped.
 name: Continuous Deployment
 
 on:
@@ -23,7 +34,8 @@ jobs:
   #   - stable releases via release-please (merged Release PR)
   #   - dev prereleases via semantic-release (every push with releasable commits)
   resolve-version:
-    if: github.event_name == 'push'
+    # Gate the whole pipeline: skipped unless the maintainer opts in (see header).
+    if: github.event_name == 'push' && vars.CD_ENABLED == 'true'
     uses: 2060-io/organization/.github/workflows/resolve-version-call.yml@41008f619521ec154b02a7065ad332fad445a2fd # v0.5.1
     with:
       prerelease-branch: ${{ github.ref_name }}
@@ -153,7 +165,7 @@ jobs:
 
   # Manually (re)announce a given tag on Discord via workflow_dispatch.
   discord-notify-manual:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && vars.CD_ENABLED == 'true'
     permissions:
       contents: read
     uses: 2060-io/organization/.github/workflows/discord-release-notify-call.yml@41008f619521ec154b02a7065ad332fad445a2fd # v0.5.1
