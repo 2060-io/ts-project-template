@@ -74,7 +74,13 @@ Runs on every pull request and on pushes to `main` / `v*` branches:
 
 ### Continuous Deployment — [`.github/workflows/cd.yml`](.github/workflows/cd.yml)
 
-Runs on pushes to `main`, `release/**` and `v*` branches:
+> **Dormant by default:** every CD job is gated on `vars.CD_ENABLED == 'true'` so
+> a fresh repo never publishes to Docker Hub before it's set up. To enable, either
+> add the repo variable `CD_ENABLED = true` (Settings → Secrets and variables →
+> Actions → Variables) **or** delete the `&& vars.CD_ENABLED == 'true'` guards in
+> `cd.yml`. Also add the required secrets (below) and rename `IMAGE_NAME` / the chart.
+
+Once enabled, it runs on pushes to `main`, `release/**` and `v*` branches:
 
 1. **`resolve-version`** — reusable `resolve-version-call` decides the next
    version: **stable** releases via [release-please](https://github.com/googleapis/release-please)

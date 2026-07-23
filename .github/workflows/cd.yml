@@ -1,3 +1,6 @@
+# Dormant by default: gated on `vars.CD_ENABLED == 'true'` so a fresh repo never
+# publishes to Docker Hub before it's set up. To enable, either create the repo
+# variable CD_ENABLED=true, or delete the `&& vars.CD_ENABLED == 'true'` guards below.
 name: Continuous Deployment
 
 on:
@@ -23,7 +26,8 @@ jobs:
   #   - stable releases via release-please (merged Release PR)
   #   - dev prereleases via semantic-release (every push with releasable commits)
   resolve-version:
-    if: github.event_name == 'push'
+    # Gate the whole pipeline: skipped unless the maintainer opts in (see header).
+    if: github.event_name == 'push' && vars.CD_ENABLED == 'true'
     uses: 2060-io/organization/.github/workflows/resolve-version-call.yml@41008f619521ec154b02a7065ad332fad445a2fd # v0.5.1
     with:
       prerelease-branch: ${{ github.ref_name }}
@@ -153,7 +157,7 @@ jobs:
 
   # Manually (re)announce a given tag on Discord via workflow_dispatch.
   discord-notify-manual:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && vars.CD_ENABLED == 'true'
     permissions:
       contents: read
     uses: 2060-io/organization/.github/workflows/discord-release-notify-call.yml@41008f619521ec154b02a7065ad332fad445a2fd # v0.5.1
