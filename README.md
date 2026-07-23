@@ -74,14 +74,11 @@ Runs on every pull request and on pushes to `main` / `v*` branches:
 
 ### Continuous Deployment — [`.github/workflows/cd.yml`](.github/workflows/cd.yml)
 
-> **Dormant by default.** So a repo created from this template never publishes a
-> throwaway image/chart to Docker Hub before it is configured, the whole CD
-> pipeline is skipped unless the repository variable **`CD_ENABLED`** is set to
-> `true`. To activate it:
-> 1. **Settings → Secrets and variables → Actions → Variables** → add
->    `CD_ENABLED = true`.
-> 2. Add the required secrets (see below).
-> 3. Rename `IMAGE_NAME` and the chart to match the project (see *Adapting…*).
+> **Dormant by default:** every CD job is gated on `vars.CD_ENABLED == 'true'` so
+> a fresh repo never publishes to Docker Hub before it's set up. To enable, either
+> add the repo variable `CD_ENABLED = true` (Settings → Secrets and variables →
+> Actions → Variables) **or** delete the `&& vars.CD_ENABLED == 'true'` guards in
+> `cd.yml`. Also add the required secrets (below) and rename `IMAGE_NAME` / the chart.
 
 Once enabled, it runs on pushes to `main`, `release/**` and `v*` branches:
 

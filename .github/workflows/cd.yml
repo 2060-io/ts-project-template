@@ -1,14 +1,6 @@
-# Continuous Deployment.
-#
-# This pipeline is DORMANT by default so a freshly-created repo (or a fork of the
-# template) never tries to publish a throwaway image/chart to Docker Hub before it
-# is configured. To activate it, the maintainer must OPT IN explicitly:
-#   1. Create a repository variable  CD_ENABLED = true
-#      (Settings → Secrets and variables → Actions → Variables)
-#   2. Add the required secrets: DOCKER_HUB_LOGIN, DOCKER_HUB_PWD,
-#      DISCORD_UPDATES_WEBHOOK_URL
-#   3. Rename IMAGE_NAME / the chart to match the new project.
-# Until CD_ENABLED is 'true', every job below is skipped.
+# Dormant by default: gated on `vars.CD_ENABLED == 'true'` so a fresh repo never
+# publishes to Docker Hub before it's set up. To enable, either create the repo
+# variable CD_ENABLED=true, or delete the `&& vars.CD_ENABLED == 'true'` guards below.
 name: Continuous Deployment
 
 on:
