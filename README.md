@@ -90,6 +90,26 @@ Runs on pushes to `main`, `release/**` and `v*` branches:
 Versioning is driven by [`release-please-config.json`](release-please-config.json)
 and [`.release-please-manifest.json`](.release-please-manifest.json).
 
+### Maintenance branches
+
+Besides `main`, the pipeline supports **maintenance branches** named `v1`, `v1.11`,
+… which keep an older line alive while `main` moves on. Two rules make this safe:
+
+- Dev prereleases are anchored to the branch itself (`prerelease-branch:
+  ${{ github.ref_name }}`), so a maintenance branch does not reuse `main`'s
+  prerelease sequence.
+- **Cross-line floating tags are only published from `main`.** A release from
+  `v1.11` publishes its immutable version tag and its own minor-line pointer
+  (`v1.11`), but never moves `latest`, `v1`, `dev`, `v1-dev` or `v1.11-dev`
+  backwards.
+
+| Branch | Release | Tags published |
+| --- | --- | --- |
+| `main` | stable `v2.0.0` | `v2.0.0`, `v2.0`, `latest`, `v2` |
+| `v1.11` | stable `v1.11.5` | `v1.11.5`, `v1.11` |
+| `main` | dev `v2.1.0-dev.3` | `v2.1.0-dev.3`, `v2.1.0-dev`, `dev`, `v2-dev`, `v2.1-dev` |
+| `v1.11` | dev `v1.11.10-dev.2` | `v1.11.10-dev.2`, `v1.11.10-dev` |
+
 ### Required repository secrets
 
 | Secret | Used by | Purpose |

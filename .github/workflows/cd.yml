@@ -2,7 +2,7 @@ name: Continuous Deployment
 
 on:
   push:
-    branches: [main, 'release/**']
+    branches: [main, 'release/**', 'v[0-9]*']
   workflow_dispatch:
     inputs:
       notify_tag:
@@ -25,6 +25,8 @@ jobs:
   resolve-version:
     if: github.event_name == 'push'
     uses: 2060-io/organization/.github/workflows/resolve-version-call.yml@41008f619521ec154b02a7065ad332fad445a2fd # v0.5.1
+    with:
+      prerelease-branch: ${{ github.ref_name }}
 
   docker:
     needs: resolve-version
@@ -45,24 +47,35 @@ jobs:
 
       - name: Compute tags
         id: tags
+        env:
+          IS_MAIN: ${{ github.ref_name == 'main' }}
         run: |
           HUB="${{ secrets.DOCKER_HUB_LOGIN }}/${IMAGE_NAME}"
           # The fully-qualified, immutable version tag is always published.
           TAGS="${HUB}:${RELEASE_VERSION}"
           if [ "$RELEASE_TYPE" = "stable" ]; then
+            # Minor-line pointer (e.g. v1.11): owned by whichever branch maintains that line.
             TAGS="${TAGS}
-          ${HUB}:latest
-          ${HUB}:v${RELEASE_MAJOR}
           ${HUB}:v${RELEASE_MAJOR}.${RELEASE_MINOR}"
+            # Cross-line floating pointers only from the default branch (main). A maintenance
+            # branch (e.g. v1.11) must never move 'latest' or the major (v1) pointer backwards.
+            if [ "$IS_MAIN" = "true" ]; then
+              TAGS="${TAGS}
+          ${HUB}:latest
+          ${HUB}:v${RELEASE_MAJOR}"
+            fi
           else
-            # Patch-level dev pointer (e.g. v1.2.3-dev). Use the full patch number:
+            # Patch-level dev pointer (e.g. v1.11.1-dev). Use the full patch number:
             # release-patch is a plain integer, so truncating collapses 10-19 onto 1.
-            P="${RELEASE_PATCH}"
             TAGS="${TAGS}
+          ${HUB}:v${RELEASE_MAJOR}.${RELEASE_MINOR}.${RELEASE_PATCH}-dev"
+            # Floating dev pointers ('dev', v1-dev, v1.11-dev) only from the default branch (main).
+            if [ "$IS_MAIN" = "true" ]; then
+              TAGS="${TAGS}
           ${HUB}:dev
           ${HUB}:v${RELEASE_MAJOR}-dev
-          ${HUB}:v${RELEASE_MAJOR}.${RELEASE_MINOR}-dev
-          ${HUB}:v${RELEASE_MAJOR}.${RELEASE_MINOR}.${P}-dev"
+          ${HUB}:v${RELEASE_MAJOR}.${RELEASE_MINOR}-dev"
+            fi
           fi
           {
             echo "list<<EOF"
