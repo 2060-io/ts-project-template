@@ -17,7 +17,7 @@ jobs:
   # Reusable 2060 pipeline: build + format + types + unit/integration/e2e tests,
   # PR-title (conventional commits) validation and Helm chart linting.
   ci:
-    uses: 2060-io/organization/.github/workflows/2060-linter-call.yml@41008f619521ec154b02a7065ad332fad445a2fd # v0.5.1
+    uses: 2060-io/organization/.github/workflows/2060-linter-call.yml@562f890be78c7fd3f07695446f4506d383c52219 # v0.5.2
     with:
       enable-charts-lint: true
 
